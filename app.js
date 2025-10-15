@@ -30,7 +30,7 @@ timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 // ====== Estaciones ======
 const stationSelect = document.getElementById('stationSelect');
-fetch('http://localhost:8080/stations')
+fetch('http://192.168.1.100:8080/stations')
   .then(res => res.json())
   .then(stations => {
     let options = '';
@@ -93,8 +93,15 @@ const choices = new Choices(fieldsSelect, {
 });
 
 function updateFieldsOptions(granularity) {
-  const fields = fieldsByGranularity[granularity].split(',');
+  if (granularity === 'mixed') {
+    const allFields = Object.keys(fieldMap);
+    choices.clearStore();
+    const newChoices = allFields.map(f => ({ value: f, label: fieldMap[f].label, selected: true }));
+    choices.setChoices(newChoices, 'value', 'label', true);
+    return;
+  }
 
+  const fields = fieldsByGranularity[granularity].split(',');
   choices.clearStore();
   const newChoices = fields.map(f => ({ value: f, label: (fieldMap[f]?.label || f.replace(/_/g, ' ')), selected: true }));
   choices.setChoices(newChoices, 'value', 'label', true);
@@ -103,11 +110,8 @@ function updateFieldsOptions(granularity) {
 // Inicializar fields al cargar la página
 updateFieldsOptions(granularitySelect.value);
 
-// ====== Cambiar fields y formato de fechas al cambiar granularidad ======
-granularitySelect.addEventListener('change', () => {
-  const gran = granularitySelect.value;
-  updateFieldsOptions(gran);
-
+// Función para ajustar flatpickr según granularidad
+function updatePickersForGranularity(gran) {
   switch (gran) {
     case 'raw':
       startPicker.set('enableTime', true); startPicker.set('dateFormat', "Y-m-d H:i");
@@ -129,8 +133,46 @@ granularitySelect.addEventListener('change', () => {
       startPicker.set('enableTime', false); startPicker.set('dateFormat', "Y");
       endPicker.set('enableTime', false); endPicker.set('dateFormat', "Y");
       break;
+    case 'mixed':
+      startPicker.set('enableTime', true); startPicker.set('dateFormat', "Y-m-d H:i");
+      endPicker.set('enableTime', true); endPicker.set('dateFormat', "Y-m-d H:i");
+      break;
   }
+}
+
+// ====== Aplicar al cargar la página ======
+updatePickersForGranularity(granularitySelect.value);
+
+// ====== También al cambiar granularidad ======
+granularitySelect.addEventListener('change', () => {
+  const gran = granularitySelect.value;
+  updateFieldsOptions(gran);
+  updatePickersForGranularity(gran);
 });
+
+function normalizeDateForGranularity(value, granularity, isStart=true) {
+  if (!value) return '';
+  let d;
+  switch(granularity) {
+    case 'month': {
+      // Añadir primer día o último día del mes
+      const [year, month] = value.split('-').map(Number);
+      const day = isStart ? 1 : new Date(year, month, 0).getDate(); // último día del mes
+      d = new Date(year, month-1, day, isStart ? 0 : 23, isStart ? 0 : 59, isStart ? 0 : 59);
+      break;
+    }
+    case 'year': {
+      const year = Number(value);
+      const month = isStart ? 0 : 11;
+      const day = isStart ? 1 : 31;
+      d = new Date(year, month, day, isStart ? 0 : 23, isStart ? 0 : 59, isStart ? 0 : 59);
+      break;
+    }
+    default:
+      d = new Date(value);
+  }
+  return d.toISOString(); // formato completo UTC
+}
 
 // ====== Mensajes ======
 function showMessage(type, text) {
@@ -146,16 +188,51 @@ function showMessage(type, text) {
   setTimeout(() => alertDiv.remove(), 5000);
 }
 
+// ====== Renderizado de datos con granularidad visible ======
+function renderData(dataArray) {
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = '';
+  if (dataArray.length === 0) {
+    resultsDiv.innerHTML = '<p>No hay datos para este rango.</p>';
+    return;
+  }
+
+  dataArray.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card shadow-sm';
+    
+    // Detectar granularidad
+    let granLabel = 'Desconocido';
+    if (item.hasOwnProperty('avg_temperature')) granLabel = 'Horario';
+    if (item.hasOwnProperty('max_temperature') && !item.hasOwnProperty('avg_temperature')) granLabel = 'Diario';
+    if (item.hasOwnProperty('temperature') && !item.hasOwnProperty('avg_temperature')) granLabel = 'Raw';
+
+    let innerHTML = `<div class="card-body">
+      <h6 class="card-subtitle mb-2 text-muted">${item.period_start} → ${item.period_end} (${granLabel})</h6>
+      <div class="row g-2">`;
+
+    for (const [key, value] of Object.entries(item)) {
+      if (key === 'period_start' || key === 'period_end') continue;
+      const field = fieldMap[key];
+      const label = field ? field.label : key.replace(/_/g, ' ');
+      const unit = field ? field.unit : '';
+      let displayValue = (!isNaN(value) && value !== null) ? Number(value).toFixed(2) : value;
+      innerHTML += `<div class="col-12 col-sm-6 col-lg-3"><strong>${label}:</strong> ${displayValue} ${unit}</div>`;
+    }
+
+    innerHTML += `</div></div>`;
+    card.innerHTML = innerHTML;
+    resultsDiv.appendChild(card);
+  });
+}
+
 // ====== Buscar datos ======
 document.getElementById('searchBtn').addEventListener('click', async () => {
   const stationId = stationSelect.value;
   const timezone = timezoneSelect.value;
-  const start = startInput.value;
-  const end = endInput.value;
   const granularity = granularitySelect.value;
-
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = ''; // Limpiar resultados antes de buscar
+  const start = normalizeDateForGranularity(startInput.value, granularity, true);;
+  const end = normalizeDateForGranularity(endInput.value, granularity, false);
 
   if (!stationId || !timezone || !start || !end) {
     showMessage('warning', 'Por favor selecciona estación, zona horaria y rango de fechas.');
@@ -169,7 +246,85 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   }
   const fields = selectedOptions.join(',');
 
-  const url = new URL(`http://localhost:8080/stations/${stationId}/data`);
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = ''; // Limpiar resultados antes de buscar
+
+  // ======= Lógica MIXED =======
+    if (granularity === 'mixed') {
+      const dailyUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      dailyUrl.searchParams.append('timezone', timezone);
+      dailyUrl.searchParams.append('start_time', start);
+      dailyUrl.searchParams.append('end_time', end);
+      dailyUrl.searchParams.append('granularity', 'day');
+      dailyUrl.searchParams.append('fields', fields);
+
+      const hourlyUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      hourlyUrl.searchParams.append('timezone', timezone);
+      hourlyUrl.searchParams.append('start_time', start);
+      hourlyUrl.searchParams.append('end_time', end);
+      hourlyUrl.searchParams.append('granularity', 'hour');
+      hourlyUrl.searchParams.append('fields', fields);
+
+      const rawUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      rawUrl.searchParams.append('timezone', timezone);
+      rawUrl.searchParams.append('start_time', start);
+      rawUrl.searchParams.append('end_time', end);
+      rawUrl.searchParams.append('granularity', 'raw');
+      rawUrl.searchParams.append('fields', fields);
+
+      try {
+        const [dailyData, hourlyData, rawData] = await Promise.all([
+          fetch(dailyUrl).then(r => r.json()),
+          fetch(hourlyUrl).then(r => r.json()),
+          fetch(rawUrl).then(r => r.json())
+        ]);
+
+        const combined = [];
+
+        dailyData.forEach(day => {
+          combined.push({ ...day, _gran: 'day' }); // siempre primero el resumen diario
+
+          const dayStart = new Date(day.period_start);
+          const dayEnd = new Date(day.period_end);
+
+          // Filtrar horarios y crudos dentro de este día
+          const dayHourly = hourlyData
+            .filter(h => new Date(h.period_start) >= dayStart && new Date(h.period_end) <= dayEnd)
+            .map(h => ({ ...h, _gran: 'hour' }));
+
+          const dayRaw = rawData
+            .filter(r => new Date(r.period_start) >= dayStart && new Date(r.period_end) <= dayEnd)
+            .map(r => ({ ...r, _gran: 'raw' }));
+
+          // Combinar horarios y crudos dentro del día y ordenar descendente
+          const mixedWithinDay = [...dayHourly, ...dayRaw].sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
+
+          // Añadir al array final
+          combined.push(...mixedWithinDay);
+        });
+
+        // Orden final: todos los días descendentes (más reciente primero)
+        combined.sort((a, b) => {
+          // Los diarios siempre antes de los demás del mismo periodo
+          if (a._gran === 'day' && b._gran !== 'day') return -1;
+          if (b._gran === 'day' && a._gran !== 'day') return 1;
+
+          // Orden descendente por fecha
+          return new Date(b.period_start) - new Date(a.period_start);
+        });
+
+        renderDataWithGranularity(combined);
+
+      } catch (err) {
+        console.error(err);
+        showMessage('danger', 'Error al buscar datos mixtos.');
+      }
+
+      return;
+    }
+
+  // ======= Lógica normal para raw/hour/day/month/year =======
+  const url = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
   url.searchParams.append('timezone', timezone);
   url.searchParams.append('start_time', start);
   url.searchParams.append('end_time', end);
@@ -180,42 +335,86 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Error en la respuesta del servidor');
     const data = await res.json();
-
-    if (data.length === 0) {
-      resultsDiv.innerHTML = '<p>No hay datos para este rango.</p>';
-      return;
-    }
-
-    data.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'card shadow-sm';
-      let innerHTML = `
-        <div class="card-body">
-          <h6 class="card-subtitle mb-2 text-muted">${item.period_start} → ${item.period_end}</h6>
-          <div class="row g-2">
-      `;
-
-      for (const [key, value] of Object.entries(item)) {
-        if (key === 'period_start' || key === 'period_end') continue;
-
-        const field = fieldMap[key];
-        const label = field ? field.label : key.replace(/_/g, ' ');
-        const unit = field ? field.unit : '';
-
-        let displayValue = value;
-        if (!isNaN(value) && value !== null) displayValue = Number(value).toFixed(2);
-
-        innerHTML += `<div class="col-12 col-sm-6 col-lg-3"><strong>${label}:</strong> ${displayValue} ${unit}</div>`;
-      }
-
-      innerHTML += `</div></div>`;
-      card.innerHTML = innerHTML;
-      resultsDiv.appendChild(card);
-    });
-
+    data.sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
+    renderDataWithGranularity(data.map(d => ({ ...d, _gran: granularity })));
   } catch (err) {
     console.error(err);
-    resultsDiv.innerHTML = '';
     showMessage('danger', 'Error al buscar datos.');
   }
 });
+
+// ====== Renderizado usando _gran para mostrar la granularidad ======
+function renderDataWithGranularity(dataArray) {
+  const resultsDiv = document.getElementById('results');       
+  resultsDiv.innerHTML = ''; 
+  if (dataArray.length === 0) {                                             
+    resultsDiv.innerHTML = '<p>No hay datos para este rango.</p>';
+    return;                             
+  }                              
+
+  const granColors = {
+    raw: '#fdae61',    // naranja
+    hour: '#66c2a5',   // verde azulado
+    day: '#3288bd',    // azul
+    month: '#d53e4f',  // rojo intenso
+    year: '#9e9ac8'    // morado
+  };
+
+  // Colores claritos para fondo del card
+  const cardBgColors = {
+    raw: '#fff3e0',    // naranja clarito
+    hour: '#e0f7f1',   // verde clarito
+    day: '#e6f0ff',    // azul clarito
+    month: '#fde0e0',  // rojo clarito
+    year: '#d6cfea'    // morado clarito
+  };
+
+  dataArray.forEach(item => {                                             
+    const card = document.createElement('div'); 
+    card.className = 'card shadow-sm';
+
+    // Asignar fondo clarito según granularidad
+    card.style.backgroundColor = cardBgColors[item._gran] || '#f0f0f0';
+
+    // Label y color para badge
+    const granLabel = item._gran === 'raw' ? 'Raw' :
+                      item._gran === 'hour' ? 'Horario' :
+                      item._gran === 'day' ? 'Diario' :
+                      item._gran === 'month' ? 'Mensual' :
+                      item._gran === 'year' ? 'Anual' :
+                      'Desconocido';
+
+    const badgeColor = granColors[item._gran] || '#888';
+
+    const badgeHTML = `<span class="gran-badge" style="
+      background-color: ${badgeColor}; 
+      color: white;
+      padding: 4px 8px; 
+      border-radius: 6px; 
+      font-size: 0.75rem;
+      margin-left: 8px;
+      font-weight: 600;
+      display: inline-block;
+    ">${granLabel}</span>`;
+
+    let innerHTML = `<div class="card-body">                      
+      <h6 class="card-subtitle mb-2">
+        ${item.period_start} → ${item.period_end} ${badgeHTML}
+      </h6>                                                                        
+      <div class="row g-2">`;                            
+
+    for (const [key, value] of Object.entries(item)) {
+      if (key === 'period_start' || key === 'period_end' || key === '_gran') continue;
+      const field = fieldMap[key];                                
+      const label = field ? field.label : key.replace(/_/g, ' ');
+      const unit = field ? field.unit : '';                                         
+      let displayValue = (!isNaN(value) && value !== null) ? Number(value).toFixed(2) : value;
+      innerHTML += `<div class="col-12 col-sm-6 col-lg-3"><strong>${label}:</strong> ${displayValue} ${unit}</div>`;
+    }                                                
+
+    innerHTML += `</div></div>`;                      
+    card.innerHTML = innerHTML;                 
+    resultsDiv.appendChild(card);                                                
+  });                                                  
+}
+
