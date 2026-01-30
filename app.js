@@ -3,18 +3,50 @@ const granularitySelect = document.getElementById('granularitySelect');
 const startInput = document.getElementById('startTimestamp');
 const endInput = document.getElementById('endTimestamp');
 
+// Función para obtener fecha actual en formato YYYY-MM-DD HH:mm
+function getCurrentDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// Función para obtener fecha hace 6 horas en formato YYYY-MM-DD HH:mm
+function getSixHoursAgoDateTime() {
+  const now = new Date();
+  const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const year = sixHoursAgo.getFullYear();
+  const month = String(sixHoursAgo.getMonth() + 1).padStart(2, '0');
+  const day = String(sixHoursAgo.getDate()).padStart(2, '0');
+  const hours = String(sixHoursAgo.getHours()).padStart(2, '0');
+  const minutes = String(sixHoursAgo.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// Establecer valores iniciales en los inputs
+const startDefault = getSixHoursAgoDateTime();
+const endDefault = getCurrentDateTime();
+
+startInput.value = startDefault;
+endInput.value = endDefault;
+
 let startPicker = flatpickr(startInput, {
   enableTime: true,
   dateFormat: "Y-m-d H:i",
   time_24hr: true,
-  locale: "es"
+  locale: "es",
+  defaultDate: startDefault
 });
 
 let endPicker = flatpickr(endInput, {
   enableTime: true,
   dateFormat: "Y-m-d H:i",
   time_24hr: true,
-  locale: "es"
+  locale: "es",
+  defaultDate: endDefault
 });
 
 // ====== Timezones ======
@@ -188,161 +220,6 @@ function showMessage(type, text) {
   setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// ====== Renderizado de datos con granularidad visible ======
-function renderData(dataArray) {
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = '';
-  if (dataArray.length === 0) {
-    resultsDiv.innerHTML = '<p>No hay datos para este rango.</p>';
-    return;
-  }
-
-  dataArray.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'card shadow-sm';
-    
-    // Detectar granularidad
-    let granLabel = 'Desconocido';
-    if (item.hasOwnProperty('avg_temperature')) granLabel = 'Horario';
-    if (item.hasOwnProperty('max_temperature') && !item.hasOwnProperty('avg_temperature')) granLabel = 'Diario';
-    if (item.hasOwnProperty('temperature') && !item.hasOwnProperty('avg_temperature')) granLabel = 'Raw';
-
-    let innerHTML = `<div class="card-body">
-      <h6 class="card-subtitle mb-2 text-muted">${item.period_start} → ${item.period_end} (${granLabel})</h6>
-      <div class="row g-2">`;
-
-    for (const [key, value] of Object.entries(item)) {
-      if (key === 'period_start' || key === 'period_end') continue;
-      const field = fieldMap[key];
-      const label = field ? field.label : key.replace(/_/g, ' ');
-      const unit = field ? field.unit : '';
-      let displayValue = (!isNaN(value) && value !== null) ? Number(value).toFixed(2) : value;
-      innerHTML += `<div class="col-12 col-sm-6 col-lg-3"><strong>${label}:</strong> ${displayValue} ${unit}</div>`;
-    }
-
-    innerHTML += `</div></div>`;
-    card.innerHTML = innerHTML;
-    resultsDiv.appendChild(card);
-  });
-}
-
-// ====== Buscar datos ======
-document.getElementById('searchBtn').addEventListener('click', async () => {
-  const stationId = stationSelect.value;
-  const timezone = timezoneSelect.value;
-  const granularity = granularitySelect.value;
-  const start = normalizeDateForGranularity(startInput.value, granularity, true);;
-  const end = normalizeDateForGranularity(endInput.value, granularity, false);
-
-  if (!stationId || !timezone || !start || !end) {
-    showMessage('warning', 'Por favor selecciona estación, zona horaria y rango de fechas.');
-    return;
-  }
-
-  const selectedOptions = Array.from(fieldsSelect.selectedOptions).map(opt => opt.value);
-  if (selectedOptions.length === 0) {
-    showMessage('warning', 'Debes seleccionar al menos un campo.');
-    return;
-  }
-  const fields = selectedOptions.join(',');
-
-  const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = ''; // Limpiar resultados antes de buscar
-
-  // ======= Lógica MIXED =======
-    if (granularity === 'mixed') {
-      const dailyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
-      dailyUrl.searchParams.append('timezone', timezone);
-      dailyUrl.searchParams.append('start_time', start);
-      dailyUrl.searchParams.append('end_time', end);
-      dailyUrl.searchParams.append('granularity', 'day');
-      dailyUrl.searchParams.append('fields', fields);
-
-      const hourlyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
-      hourlyUrl.searchParams.append('timezone', timezone);
-      hourlyUrl.searchParams.append('start_time', start);
-      hourlyUrl.searchParams.append('end_time', end);
-      hourlyUrl.searchParams.append('granularity', 'hour');
-      hourlyUrl.searchParams.append('fields', fields);
-
-      const rawUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
-      rawUrl.searchParams.append('timezone', timezone);
-      rawUrl.searchParams.append('start_time', start);
-      rawUrl.searchParams.append('end_time', end);
-      rawUrl.searchParams.append('granularity', 'raw');
-      rawUrl.searchParams.append('fields', fields);
-
-      try {
-        const [dailyData, hourlyData, rawData] = await Promise.all([
-          fetch(dailyUrl).then(r => r.json()),
-          fetch(hourlyUrl).then(r => r.json()),
-          fetch(rawUrl).then(r => r.json())
-        ]);
-
-        const combined = [];
-
-        dailyData.forEach(day => {
-          combined.push({ ...day, _gran: 'day' }); // siempre primero el resumen diario
-
-          const dayStart = new Date(day.period_start);
-          const dayEnd = new Date(day.period_end);
-
-          // Filtrar horarios y crudos dentro de este día
-          const dayHourly = hourlyData
-            .filter(h => new Date(h.period_start) >= dayStart && new Date(h.period_end) <= dayEnd)
-            .map(h => ({ ...h, _gran: 'hour' }));
-
-          const dayRaw = rawData
-            .filter(r => new Date(r.period_start) >= dayStart && new Date(r.period_end) <= dayEnd)
-            .map(r => ({ ...r, _gran: 'raw' }));
-
-          // Combinar horarios y crudos dentro del día y ordenar descendente
-          const mixedWithinDay = [...dayHourly, ...dayRaw].sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
-
-          // Añadir al array final
-          combined.push(...mixedWithinDay);
-        });
-
-        // Orden final: todos los días descendentes (más reciente primero)
-        combined.sort((a, b) => {
-          // Los diarios siempre antes de los demás del mismo periodo
-          if (a._gran === 'day' && b._gran !== 'day') return -1;
-          if (b._gran === 'day' && a._gran !== 'day') return 1;
-
-          // Orden descendente por fecha
-          return new Date(b.period_start) - new Date(a.period_start);
-        });
-
-        renderDataWithGranularity(combined);
-
-      } catch (err) {
-        console.error(err);
-        showMessage('danger', 'Error al buscar datos mixtos.');
-      }
-
-      return;
-    }
-
-  // ======= Lógica normal para raw/hour/day/month/year =======
-  const url = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
-  url.searchParams.append('timezone', timezone);
-  url.searchParams.append('start_time', start);
-  url.searchParams.append('end_time', end);
-  url.searchParams.append('granularity', granularity);
-  url.searchParams.append('fields', fields);
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Error en la respuesta del servidor');
-    const data = await res.json();
-    data.sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
-    renderDataWithGranularity(data.map(d => ({ ...d, _gran: granularity })));
-  } catch (err) {
-    console.error(err);
-    showMessage('danger', 'Error al buscar datos.');
-  }
-});
-
 // ====== Renderizado usando _gran para mostrar la granularidad ======
 function renderDataWithGranularity(dataArray) {
   const resultsDiv = document.getElementById('results');       
@@ -418,3 +295,136 @@ function renderDataWithGranularity(dataArray) {
   });                                                  
 }
 
+// ====== Buscar datos ======
+document.getElementById('searchBtn').addEventListener('click', async () => {
+  const stationId = stationSelect.value;
+  const timezone = timezoneSelect.value;
+  const granularity = granularitySelect.value;
+  const start = normalizeDateForGranularity(startInput.value, granularity, true);
+  const end = normalizeDateForGranularity(endInput.value, granularity, false);
+
+  if (!stationId || !timezone || !start || !end) {
+    showMessage('warning', 'Por favor selecciona estación, zona horaria y rango de fechas.');
+    return;
+  }
+
+  const selectedOptions = Array.from(fieldsSelect.selectedOptions).map(opt => opt.value);
+  if (selectedOptions.length === 0) {
+    showMessage('warning', 'Debes seleccionar al menos un campo.');
+    return;
+  }
+  const fields = selectedOptions.join(',');
+
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = ''; // Limpiar resultados antes de buscar
+
+  // ======= Lógica MIXED =======
+  if (granularity === 'mixed') {
+    const dailyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    dailyUrl.searchParams.append('timezone', timezone);
+    dailyUrl.searchParams.append('start_time', start);
+    dailyUrl.searchParams.append('end_time', end);
+    dailyUrl.searchParams.append('granularity', 'day');
+    dailyUrl.searchParams.append('fields', fields);
+
+    const hourlyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    hourlyUrl.searchParams.append('timezone', timezone);
+    hourlyUrl.searchParams.append('start_time', start);
+    hourlyUrl.searchParams.append('end_time', end);
+    hourlyUrl.searchParams.append('granularity', 'hour');
+    hourlyUrl.searchParams.append('fields', fields);
+
+    const rawUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    rawUrl.searchParams.append('timezone', timezone);
+    rawUrl.searchParams.append('start_time', start);
+    rawUrl.searchParams.append('end_time', end);
+    rawUrl.searchParams.append('granularity', 'raw');
+    rawUrl.searchParams.append('fields', fields);
+
+    try {
+      const [dailyData, hourlyData, rawData] = await Promise.all([
+        fetch(dailyUrl).then(r => r.json()),
+        fetch(hourlyUrl).then(r => r.json()),
+        fetch(rawUrl).then(r => r.json())
+      ]);
+
+      const combined = [];
+
+      // 1. Ordenar días descendente
+      const sortedDaily = dailyData.sort((a, b) => 
+        new Date(b.period_start) - new Date(a.period_start)
+      );
+
+      // 2. Ordenar horarios descendente
+      const sortedHourly = hourlyData.sort((a, b) => 
+        new Date(b.period_start) - new Date(a.period_start)
+      );
+
+      // 3. Ordenar raw descendente
+      const sortedRaw = rawData.sort((a, b) => 
+        new Date(b.period_start) - new Date(a.period_start)
+      );
+
+      // 4. Para cada día
+      sortedDaily.forEach(day => {
+        // Añadir el resumen diario primero
+        combined.push({ ...day, _gran: 'day' });
+
+        const dayStart = new Date(day.period_start);
+        const dayEnd = new Date(day.period_end);
+
+        // 5. Para cada horario dentro de este día
+        sortedHourly.forEach(hour => {
+          const hourStart = new Date(hour.period_start);
+          if (hourStart >= dayStart && hourStart < dayEnd) {
+            // Añadir el resumen horario
+            combined.push({ ...hour, _gran: 'hour' });
+
+            // 6. Buscar y añadir TODOS los raw dentro de esta hora específica
+            const hourStartTime = hourStart.getTime();
+            const hourEndTime = new Date(hour.period_end).getTime();
+
+            sortedRaw.forEach(raw => {
+              const rawStart = new Date(raw.period_start);
+              const rawStartTime = rawStart.getTime();
+              
+              // Si el raw está dentro de esta hora exacta
+              if (rawStartTime >= hourStartTime && rawStartTime < hourEndTime) {
+                combined.push({ ...raw, _gran: 'raw' });
+              }
+            });
+          }
+        });
+      });
+
+      // 7. Renderizar
+      renderDataWithGranularity(combined);
+
+    } catch (err) {
+      console.error(err);
+      showMessage('danger', 'Error al buscar datos mixtos.');
+    }
+
+    return;
+  }
+
+  // ======= Lógica normal para raw/hour/day/month/year =======
+  const url = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+  url.searchParams.append('timezone', timezone);
+  url.searchParams.append('start_time', start);
+  url.searchParams.append('end_time', end);
+  url.searchParams.append('granularity', granularity);
+  url.searchParams.append('fields', fields);
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Error en la respuesta del servidor');
+    const data = await res.json();
+    // Ordenar descendente para granularidades no mixtas
+    data.sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
+    renderDataWithGranularity(data.map(d => ({ ...d, _gran: granularity })));
+  } catch (err) {
+    console.error(err);
+    showMessage('danger', 'Error al buscar datos.');
+  }
+});
