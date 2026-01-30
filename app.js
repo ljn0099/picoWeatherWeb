@@ -87,36 +87,62 @@ const fieldsByGranularity = {
 
 // ====== Field names and units mapping ======
 const fieldMap = {
+  // Temperature fields
   temperature: { label: "Temperature", unit: "°C" },
-  avg_temperature: { label: "Average temperature", unit: "°C" },
+  avg_temperature: { label: "Avg. temperature", unit: "°C" },
   max_temperature: { label: "Max. temperature", unit: "°C" },
   min_temperature: { label: "Min. temperature", unit: "°C" },
+  stddev_temperature: { label: "Temperature std. deviation", unit: "°C" },
+  
+  // Humidity fields
   humidity: { label: "Humidity", unit: "%" },
-  avg_humidity: { label: "Average humidity", unit: "%" },
+  avg_humidity: { label: "Avg. humidity", unit: "%" },
   max_humidity: { label: "Max. humidity", unit: "%" },
   min_humidity: { label: "Min. humidity", unit: "%" },
+  stddev_humidity: { label: "Humidity std. deviation", unit: "%" },
+  
+  // Pressure fields
   pressure: { label: "Pressure", unit: "hPa" },
-  avg_pressure: { label: "Average pressure", unit: "hPa" },
+  avg_pressure: { label: "Avg. pressure", unit: "hPa" },
   max_pressure: { label: "Max. pressure", unit: "hPa" },
   min_pressure: { label: "Min. pressure", unit: "hPa" },
+  
+  // Lux fields
   lux: { label: "Luminosity", unit: "lx" },
-  avg_lux: { label: "Average luminosity", unit: "lx" },
+  avg_lux: { label: "Avg. luminosity", unit: "lx" },
+  max_lux: { label: "Max. luminosity", unit: "lx" },
+  
+  // UV Index fields
   uvi: { label: "UV Index", unit: "" },
-  avg_uvi: { label: "Average UV Index", unit: "" },
-  wind_speed: { label: "Wind speed", unit: "m/s" },
-  avg_wind_speed: { label: "Average wind speed", unit: "m/s" },
+  avg_uvi: { label: "Avg. UV Index", unit: "" },
+  max_uvi: { label: "Max. UV Index", unit: "" },
+  
+  // Wind speed fields
+  wind_speed: { label: "Wind speed", unit: "km/h" },
+  avg_wind_speed: { label: "Avg. wind speed", unit: "km/h" },
+  stddev_wind_speed: { label: "Wind speed std. deviation", unit: "km/h" },
+  
+  // Wind direction fields
   wind_direction: { label: "Wind direction", unit: "°" },
-  avg_wind_direction: { label: "Average wind direction", unit: "°" },
-  gust_speed: { label: "Gust", unit: "m/s" },
-  max_gust_speed: { label: "Max. gust", unit: "m/s" },
+  avg_wind_direction: { label: "Avg. wind direction", unit: "°" },
+  
+  // Gust fields
+  gust_speed: { label: "Gust speed", unit: "km/h" },
+  max_gust_speed: { label: "Max. gust speed", unit: "km/h" },
   gust_direction: { label: "Gust direction", unit: "°" },
   max_gust_direction: { label: "Max. gust direction", unit: "°" },
+  
+  // Rainfall fields
   rainfall: { label: "Rainfall", unit: "mm" },
   sum_rainfall: { label: "Total rainfall", unit: "mm" },
   stddev_rainfall: { label: "Rainfall std. deviation", unit: "mm" },
-  solar_irradiance: { label: "Solar irradiance", unit: "W/m²" },
-  avg_solar_irradiance: { label: "Average solar irradiance", unit: "W/m²" },
-  wind_run: { label: "Wind run", unit: "km"}
+  
+  // Solar irradiance fields
+  solar_irradiance: { label: "Solar irradiance", unit: "W/m2" },
+  avg_solar_irradiance: { label: "Avg. solar irradiance", unit: "W/m2" },
+  
+  // Wind run field
+  wind_run: { label: "Wind run", unit: "km" }
 };
 
 // ====== Field selector with Choices.js ======
