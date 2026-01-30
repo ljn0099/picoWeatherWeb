@@ -1,9 +1,12 @@
-// ====== Inicializar Flatpickr ======
+// ====== Configuration ======
+const API_HOST = 'https://api.picoweather.net'; // API hostname variable
+
+// ====== Initialize Flatpickr ======
 const granularitySelect = document.getElementById('granularitySelect');
 const startInput = document.getElementById('startTimestamp');
 const endInput = document.getElementById('endTimestamp');
 
-// Función para obtener fecha actual en formato YYYY-MM-DD HH:mm
+// Function to get current date/time in YYYY-MM-DD HH:mm format
 function getCurrentDateTime() {
   const now = new Date();
   const year = now.getFullYear();
@@ -14,7 +17,7 @@ function getCurrentDateTime() {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-// Función para obtener fecha hace 6 horas en formato YYYY-MM-DD HH:mm
+// Function to get date/time 6 hours ago in YYYY-MM-DD HH:mm format
 function getSixHoursAgoDateTime() {
   const now = new Date();
   const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
@@ -26,7 +29,7 @@ function getSixHoursAgoDateTime() {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-// Establecer valores iniciales en los inputs
+// Set default values in inputs
 const startDefault = getSixHoursAgoDateTime();
 const endDefault = getCurrentDateTime();
 
@@ -60,9 +63,9 @@ timezones.forEach(tz => {
 });
 timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-// ====== Estaciones ======
+// ====== Stations ======
 const stationSelect = document.getElementById('stationSelect');
-fetch('https://api.picoweather.net/stations')
+fetch(`${API_HOST}/stations`)
   .then(res => res.json())
   .then(stations => {
     let options = '';
@@ -71,9 +74,9 @@ fetch('https://api.picoweather.net/stations')
     });
     stationSelect.innerHTML = options;
   })
-  .catch(err => console.error('Error cargando estaciones:', err));
+  .catch(err => console.error('Error loading stations:', err));
 
-// ====== Fields por granularidad ======
+// ====== Fields by granularity ======
 const fieldsByGranularity = {
   raw: 'temperature,humidity,pressure,lux,uvi,wind_speed,wind_direction,gust_speed,gust_direction,rainfall,solar_irradiance',
   hour: 'avg_temperature,avg_humidity,avg_pressure,sum_rainfall,stddev_rainfall,avg_wind_speed,avg_wind_direction,stddev_wind_speed,max_gust_speed,max_gust_direction,avg_lux,avg_uvi,avg_solar_irradiance',
@@ -82,41 +85,41 @@ const fieldsByGranularity = {
   year: 'max_temperature,min_temperature,avg_temperature,stddev_temperature,max_humidity,min_humidity,avg_humidity,stddev_humidity,max_pressure,min_pressure,avg_pressure,sum_rainfall,stddev_rainfall,avg_wind_speed,avg_wind_direction,stddev_wind_speed,max_gust_speed,max_gust_direction,max_lux,avg_lux,max_uvi,avg_uvi,avg_solar_irradiance'
 };
 
-// ====== Mapeo de nombres y unidades ======
+// ====== Field names and units mapping ======
 const fieldMap = {
-  temperature: { label: "Temperatura", unit: "°C" },
-  avg_temperature: { label: "Temperatura media", unit: "°C" },
-  max_temperature: { label: "Máx. temperatura", unit: "°C" },
-  min_temperature: { label: "Mín. temperatura", unit: "°C" },
-  humidity: { label: "Humedad", unit: "%" },
-  avg_humidity: { label: "Humedad media", unit: "%" },
-  max_humidity: { label: "Humedad máxima", unit: "%" },
-  min_humidity: { label: "Humedad mínima", unit: "%" },
-  pressure: { label: "Presión", unit: "hPa" },
-  avg_pressure: { label: "Presión media", unit: "hPa" },
-  max_pressure: { label: "Presión máxima", unit: "hPa" },
-  min_pressure: { label: "Presión mínima", unit: "hPa" },
-  lux: { label: "Luminosidad", unit: "lx" },
-  avg_lux: { label: "Luminosidad media", unit: "lx" },
-  uvi: { label: "Índice UV", unit: "" },
-  avg_uvi: { label: "Índice UV medio", unit: "" },
-  wind_speed: { label: "Velocidad viento", unit: "m/s" },
-  avg_wind_speed: { label: "Velocidad media viento", unit: "m/s" },
-  wind_direction: { label: "Dirección viento", unit: "°" },
-  avg_wind_direction: { label: "Dirección media viento", unit: "°" },
-  gust_speed: { label: "Ráfaga", unit: "m/s" },
-  max_gust_speed: { label: "Ráfaga máxima", unit: "m/s" },
-  gust_direction: { label: "Dirección ráfaga", unit: "°" },
-  max_gust_direction: { label: "Dirección ráfaga máxima", unit: "°" },
-  rainfall: { label: "Lluvia", unit: "mm" },
-  sum_rainfall: { label: "Lluvia total", unit: "mm" },
-  stddev_rainfall: { label: "Desviación lluvia", unit: "mm" },
-  solar_irradiance: { label: "Irradiancia solar", unit: "W/m²" },
-  avg_solar_irradiance: { label: "Irradiancia solar media", unit: "W/m²" },
+  temperature: { label: "Temperature", unit: "°C" },
+  avg_temperature: { label: "Average temperature", unit: "°C" },
+  max_temperature: { label: "Max. temperature", unit: "°C" },
+  min_temperature: { label: "Min. temperature", unit: "°C" },
+  humidity: { label: "Humidity", unit: "%" },
+  avg_humidity: { label: "Average humidity", unit: "%" },
+  max_humidity: { label: "Max. humidity", unit: "%" },
+  min_humidity: { label: "Min. humidity", unit: "%" },
+  pressure: { label: "Pressure", unit: "hPa" },
+  avg_pressure: { label: "Average pressure", unit: "hPa" },
+  max_pressure: { label: "Max. pressure", unit: "hPa" },
+  min_pressure: { label: "Min. pressure", unit: "hPa" },
+  lux: { label: "Luminosity", unit: "lx" },
+  avg_lux: { label: "Average luminosity", unit: "lx" },
+  uvi: { label: "UV Index", unit: "" },
+  avg_uvi: { label: "Average UV Index", unit: "" },
+  wind_speed: { label: "Wind speed", unit: "m/s" },
+  avg_wind_speed: { label: "Average wind speed", unit: "m/s" },
+  wind_direction: { label: "Wind direction", unit: "°" },
+  avg_wind_direction: { label: "Average wind direction", unit: "°" },
+  gust_speed: { label: "Gust", unit: "m/s" },
+  max_gust_speed: { label: "Max. gust", unit: "m/s" },
+  gust_direction: { label: "Gust direction", unit: "°" },
+  max_gust_direction: { label: "Max. gust direction", unit: "°" },
+  rainfall: { label: "Rainfall", unit: "mm" },
+  sum_rainfall: { label: "Total rainfall", unit: "mm" },
+  stddev_rainfall: { label: "Rainfall std. deviation", unit: "mm" },
+  solar_irradiance: { label: "Solar irradiance", unit: "W/m²" },
+  avg_solar_irradiance: { label: "Average solar irradiance", unit: "W/m²" },
   wind_run: { label: "Wind run", unit: "km"}
 };
 
-// ====== Selector de fields con Choices.js ======
+// ====== Field selector with Choices.js ======
 const fieldsSelect = document.getElementById('fieldsSelect');
 const choices = new Choices(fieldsSelect, {
   removeItemButton: true,
@@ -139,10 +142,10 @@ function updateFieldsOptions(granularity) {
   choices.setChoices(newChoices, 'value', 'label', true);
 }
 
-// Inicializar fields al cargar la página
+// Initialize fields on page load
 updateFieldsOptions(granularitySelect.value);
 
-// Función para ajustar flatpickr según granularidad
+// Function to adjust flatpickr based on granularity
 function updatePickersForGranularity(gran) {
   switch (gran) {
     case 'raw':
@@ -172,10 +175,10 @@ function updatePickersForGranularity(gran) {
   }
 }
 
-// ====== Aplicar al cargar la página ======
+// ====== Apply on page load ======
 updatePickersForGranularity(granularitySelect.value);
 
-// ====== También al cambiar granularidad ======
+// ====== Also when changing granularity ======
 granularitySelect.addEventListener('change', () => {
   const gran = granularitySelect.value;
   updateFieldsOptions(gran);
@@ -187,9 +190,9 @@ function normalizeDateForGranularity(value, granularity, isStart=true) {
   let d;
   switch(granularity) {
     case 'month': {
-      // Añadir primer día o último día del mes
+      // Add first or last day of the month
       const [year, month] = value.split('-').map(Number);
-      const day = isStart ? 1 : new Date(year, month, 0).getDate(); // último día del mes
+      const day = isStart ? 1 : new Date(year, month, 0).getDate(); // last day of month
       d = new Date(year, month-1, day, isStart ? 0 : 23, isStart ? 0 : 59, isStart ? 0 : 59);
       break;
     }
@@ -203,10 +206,10 @@ function normalizeDateForGranularity(value, granularity, isStart=true) {
     default:
       d = new Date(value);
   }
-  return d.toISOString(); // formato completo UTC
+  return d.toISOString(); // full UTC format
 }
 
-// ====== Mensajes ======
+// ====== Messages ======
 function showMessage(type, text) {
   const messagesDiv = document.getElementById('messages');
   const alertDiv = document.createElement('div');
@@ -220,46 +223,46 @@ function showMessage(type, text) {
   setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// ====== Renderizado usando _gran para mostrar la granularidad ======
+// ====== Rendering using _gran to display granularity ======
 function renderDataWithGranularity(dataArray) {
   const resultsDiv = document.getElementById('results');       
   resultsDiv.innerHTML = ''; 
   if (dataArray.length === 0) {                                             
-    resultsDiv.innerHTML = '<p>No hay datos para este rango.</p>';
+    resultsDiv.innerHTML = '<p>No data for this range.</p>';
     return;                             
   }                              
 
   const granColors = {
-    raw: '#fdae61',    // naranja
-    hour: '#66c2a5',   // verde azulado
-    day: '#3288bd',    // azul
-    month: '#d53e4f',  // rojo intenso
-    year: '#9e9ac8'    // morado
+    raw: '#fdae61',    // orange
+    hour: '#66c2a5',   // teal
+    day: '#3288bd',    // blue
+    month: '#d53e4f',  // red
+    year: '#9e9ac8'    // purple
   };
 
-  // Colores claritos para fondo del card
+  // Light background colors for card
   const cardBgColors = {
-    raw: '#fff3e0',    // naranja clarito
-    hour: '#e0f7f1',   // verde clarito
-    day: '#e6f0ff',    // azul clarito
-    month: '#fde0e0',  // rojo clarito
-    year: '#d6cfea'    // morado clarito
+    raw: '#fff3e0',    // light orange
+    hour: '#e0f7f1',   // light teal
+    day: '#e6f0ff',    // light blue
+    month: '#fde0e0',  // light red
+    year: '#d6cfea'    // light purple
   };
 
   dataArray.forEach(item => {                                             
     const card = document.createElement('div'); 
     card.className = 'card shadow-sm';
 
-    // Asignar fondo clarito según granularidad
+    // Assign light background based on granularity
     card.style.backgroundColor = cardBgColors[item._gran] || '#f0f0f0';
 
-    // Label y color para badge
+    // Label and color for badge
     const granLabel = item._gran === 'raw' ? 'Raw' :
-                      item._gran === 'hour' ? 'Horario' :
-                      item._gran === 'day' ? 'Diario' :
-                      item._gran === 'month' ? 'Mensual' :
-                      item._gran === 'year' ? 'Anual' :
-                      'Desconocido';
+                      item._gran === 'hour' ? 'Hourly' :
+                      item._gran === 'day' ? 'Daily' :
+                      item._gran === 'month' ? 'Monthly' :
+                      item._gran === 'year' ? 'Yearly' :
+                      'Unknown';
 
     const badgeColor = granColors[item._gran] || '#888';
 
@@ -295,7 +298,7 @@ function renderDataWithGranularity(dataArray) {
   });                                                  
 }
 
-// ====== Buscar datos ======
+// ====== Search data ======
 document.getElementById('searchBtn').addEventListener('click', async () => {
   const stationId = stationSelect.value;
   const timezone = timezoneSelect.value;
@@ -304,37 +307,37 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   const end = normalizeDateForGranularity(endInput.value, granularity, false);
 
   if (!stationId || !timezone || !start || !end) {
-    showMessage('warning', 'Por favor selecciona estación, zona horaria y rango de fechas.');
+    showMessage('warning', 'Please select station, timezone and date range.');
     return;
   }
 
   const selectedOptions = Array.from(fieldsSelect.selectedOptions).map(opt => opt.value);
   if (selectedOptions.length === 0) {
-    showMessage('warning', 'Debes seleccionar al menos un campo.');
+    showMessage('warning', 'You must select at least one field.');
     return;
   }
   const fields = selectedOptions.join(',');
 
   const resultsDiv = document.getElementById('results');
-  resultsDiv.innerHTML = ''; // Limpiar resultados antes de buscar
+  resultsDiv.innerHTML = ''; // Clear results before searching
 
-  // ======= Lógica MIXED =======
+  // ======= MIXED logic =======
   if (granularity === 'mixed') {
-    const dailyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    const dailyUrl = new URL(`${API_HOST}/stations/${stationId}/data`);
     dailyUrl.searchParams.append('timezone', timezone);
     dailyUrl.searchParams.append('start_time', start);
     dailyUrl.searchParams.append('end_time', end);
     dailyUrl.searchParams.append('granularity', 'day');
     dailyUrl.searchParams.append('fields', fields);
 
-    const hourlyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    const hourlyUrl = new URL(`${API_HOST}/stations/${stationId}/data`);
     hourlyUrl.searchParams.append('timezone', timezone);
     hourlyUrl.searchParams.append('start_time', start);
     hourlyUrl.searchParams.append('end_time', end);
     hourlyUrl.searchParams.append('granularity', 'hour');
     hourlyUrl.searchParams.append('fields', fields);
 
-    const rawUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+    const rawUrl = new URL(`${API_HOST}/stations/${stationId}/data`);
     rawUrl.searchParams.append('timezone', timezone);
     rawUrl.searchParams.append('start_time', start);
     rawUrl.searchParams.append('end_time', end);
@@ -350,37 +353,37 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 
       const combined = [];
 
-      // 1. Ordenar días descendente
+      // 1. Sort days descending
       const sortedDaily = dailyData.sort((a, b) => 
         new Date(b.period_start) - new Date(a.period_start)
       );
 
-      // 2. Ordenar horarios descendente
+      // 2. Sort hourly descending
       const sortedHourly = hourlyData.sort((a, b) => 
         new Date(b.period_start) - new Date(a.period_start)
       );
 
-      // 3. Ordenar raw descendente
+      // 3. Sort raw descending
       const sortedRaw = rawData.sort((a, b) => 
         new Date(b.period_start) - new Date(a.period_start)
       );
 
-      // 4. Para cada día
+      // 4. For each day
       sortedDaily.forEach(day => {
-        // Añadir el resumen diario primero
+        // Add daily summary first
         combined.push({ ...day, _gran: 'day' });
 
         const dayStart = new Date(day.period_start);
         const dayEnd = new Date(day.period_end);
 
-        // 5. Para cada horario dentro de este día
+        // 5. For each hour within this day
         sortedHourly.forEach(hour => {
           const hourStart = new Date(hour.period_start);
           if (hourStart >= dayStart && hourStart < dayEnd) {
-            // Añadir el resumen horario
+            // Add hourly summary
             combined.push({ ...hour, _gran: 'hour' });
 
-            // 6. Buscar y añadir TODOS los raw dentro de esta hora específica
+            // 6. Find and add ALL raw data within this specific hour
             const hourStartTime = hourStart.getTime();
             const hourEndTime = new Date(hour.period_end).getTime();
 
@@ -388,7 +391,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
               const rawStart = new Date(raw.period_start);
               const rawStartTime = rawStart.getTime();
               
-              // Si el raw está dentro de esta hora exacta
+              // If raw data is within this exact hour
               if (rawStartTime >= hourStartTime && rawStartTime < hourEndTime) {
                 combined.push({ ...raw, _gran: 'raw' });
               }
@@ -397,19 +400,19 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
         });
       });
 
-      // 7. Renderizar
+      // 7. Render
       renderDataWithGranularity(combined);
 
     } catch (err) {
       console.error(err);
-      showMessage('danger', 'Error al buscar datos mixtos.');
+      showMessage('danger', 'Error fetching mixed data.');
     }
 
     return;
   }
 
-  // ======= Lógica normal para raw/hour/day/month/year =======
-  const url = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
+  // ======= Normal logic for raw/hour/day/month/year =======
+  const url = new URL(`${API_HOST}/stations/${stationId}/data`);
   url.searchParams.append('timezone', timezone);
   url.searchParams.append('start_time', start);
   url.searchParams.append('end_time', end);
@@ -418,13 +421,13 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error('Error en la respuesta del servidor');
+    if (!res.ok) throw new Error('Server response error');
     const data = await res.json();
-    // Ordenar descendente para granularidades no mixtas
+    // Sort descending for non-mixed granularities
     data.sort((a, b) => new Date(b.period_start) - new Date(a.period_start));
     renderDataWithGranularity(data.map(d => ({ ...d, _gran: granularity })));
   } catch (err) {
     console.error(err);
-    showMessage('danger', 'Error al buscar datos.');
+    showMessage('danger', 'Error fetching data.');
   }
 });
