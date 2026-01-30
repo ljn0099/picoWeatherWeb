@@ -30,7 +30,7 @@ timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 // ====== Estaciones ======
 const stationSelect = document.getElementById('stationSelect');
-fetch('http://192.168.1.100:8080/stations')
+fetch('https://api.picoweather.net/stations')
   .then(res => res.json())
   .then(stations => {
     let options = '';
@@ -251,21 +251,21 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 
   // ======= Lógica MIXED =======
     if (granularity === 'mixed') {
-      const dailyUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      const dailyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
       dailyUrl.searchParams.append('timezone', timezone);
       dailyUrl.searchParams.append('start_time', start);
       dailyUrl.searchParams.append('end_time', end);
       dailyUrl.searchParams.append('granularity', 'day');
       dailyUrl.searchParams.append('fields', fields);
 
-      const hourlyUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      const hourlyUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
       hourlyUrl.searchParams.append('timezone', timezone);
       hourlyUrl.searchParams.append('start_time', start);
       hourlyUrl.searchParams.append('end_time', end);
       hourlyUrl.searchParams.append('granularity', 'hour');
       hourlyUrl.searchParams.append('fields', fields);
 
-      const rawUrl = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+      const rawUrl = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
       rawUrl.searchParams.append('timezone', timezone);
       rawUrl.searchParams.append('start_time', start);
       rawUrl.searchParams.append('end_time', end);
@@ -324,7 +324,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     }
 
   // ======= Lógica normal para raw/hour/day/month/year =======
-  const url = new URL(`http://192.168.1.100:8080/stations/${stationId}/data`);
+  const url = new URL(`https://api.picoweather.net/stations/${stationId}/data`);
   url.searchParams.append('timezone', timezone);
   url.searchParams.append('start_time', start);
   url.searchParams.append('end_time', end);
